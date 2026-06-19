@@ -2,10 +2,10 @@ name: Build My Game macOS
 
 on:
   push:
-  pull_request:
+  workflow_dispatch:
 
 jobs:
-  build-macos:
+  build:
     runs-on: macos-15
 
     steps:
@@ -13,14 +13,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Raylib
-        run: |
-          brew update
-          brew install raylib
+        run: brew install raylib
 
-      - name: Build
+      - name: Build Game
         run: |
-          g++ main.cpp -o MyGame \
-            -std=c++17 \
+          clang++ main.cpp -std=c++17 \
+            -o MyGame \
             -I$(brew --prefix)/include \
             -L$(brew --prefix)/lib \
             -lraylib
@@ -31,8 +29,9 @@ jobs:
           mkdir -p MyGame.app/Contents/Resources
 
           cp MyGame MyGame.app/Contents/MacOS/
+          chmod +x MyGame.app/Contents/MacOS/MyGame
 
-          cat > MyGame.app/Contents/Info.plist << EOF
+          cat > MyGame.app/Contents/Info.plist << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
           "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -48,12 +47,18 @@ jobs:
               <string>APPL</string>
               <key>CFBundleVersion</key>
               <string>1.0</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.0</string>
           </dict>
           </plist>
           EOF
 
-      - name: Upload App
+      - name: Create ZIP
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent MyGame.app MyGame-macOS.zip
+
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: MyGame-macOS
-          path: MyGame.app
+          path: MyGame-macOS.zip
